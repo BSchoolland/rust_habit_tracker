@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Result};
+pub use rusqlite::{params, Connection, Result};
 
 
 pub fn establish_connection() -> Result<Connection> {

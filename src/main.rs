@@ -4,7 +4,7 @@ mod database;
 
 fn main() {
     println!("Hello sqlite!");
-    let _conn = database::establish_connection().expect("SQLITE had a problem");
+    let conn = database::establish_connection().expect("SQLITE had a problem");
     println!("Database started!");
     // add a habit
     // let _ = database::add_habit(
@@ -14,18 +14,18 @@ fn main() {
     //     "Daily",
     // );
     // get all habits
-    // let habits = database::get_habits(&conn);
+    let habits = database::get_habits(&conn);
     // display the habits
-    // for habit in habits.expect("There was a problem getting habits") {
-    //     println!("Habit: {}", habit.name);
-    //     println!("Importance: {}", habit.importance);
-    //     println!("Frequency: {}", habit.frequency);
-    //     println!("Habit Entries:");
-    //     for entry in habit.habit_entries {
-    //         println!("Date: {}", entry.date);
-    //         println!("Success: {}", entry.success);
-    //     }
-    // }
+    for habit in habits.expect("There was a problem getting habits") {
+        println!("Habit: {}", habit.name);
+        println!("Importance: {}", habit.importance);
+        println!("Frequency: {}", habit.frequency);
+        println!("Habit Entries:");
+        for entry in habit.habit_entries {
+            println!("Date: {}", entry.date);
+            println!("Success: {}", entry.success);
+        }
+    }
     let habit_selected = false;
     // loop for menu
     loop {
@@ -40,7 +40,7 @@ fn main() {
             io::stdin().read_line(&mut selection).expect("failed to read line");
             selection = selection.trim().to_string();
             if selection == "a" {
-                println!("TODO: make a way to add")
+                add_habit(&conn);
             } else if selection == "s" {
                 println!("TODO: make a way to select")
             } else if selection == "c" {
@@ -75,4 +75,33 @@ fn main() {
         io::stdin().read_line(&mut selection).expect("failed to read line");
     }
 
+}
+
+fn add_habit(conn: &database::Connection){
+    println!("---ADDING A HABIT---");
+
+    println!("Habit name:");
+    let mut name: String = String::new();
+    io::stdin().read_line(&mut name).expect("failed to read line");
+    name = name.trim().to_string();
+
+    println!("Habit frequency:");
+    let mut frequency: String = String::new();
+    frequency = frequency.trim().to_string();
+    io::stdin().read_line(&mut frequency).expect("failed to read line");
+
+    println!("Habit importance:");
+    let mut importance: String = String::new();
+    io::stdin().read_line(&mut importance).expect("failed to read line");
+    importance = importance.trim().to_string();
+    let int_importance: i32 = importance.parse().unwrap();
+
+    let _ = database::add_habit(
+        &conn,
+        &name,
+        int_importance,
+        &frequency,
+    );
+    
+    println!("Habit added!")
 }
