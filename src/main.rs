@@ -4,7 +4,7 @@ mod database;
 
 fn main() {
     println!("Hello sqlite!");
-    let conn = database::establish_connection().expect("SQLITE had a problem");
+    let _conn = database::establish_connection().expect("SQLITE had a problem");
     println!("Database started!");
     // add a habit
     // let _ = database::add_habit(
@@ -26,7 +26,7 @@ fn main() {
     //         println!("Success: {}", entry.success);
     //     }
     // }
-    let mut habit_selected = false;
+    let habit_selected = false;
     // loop for menu
     loop {
         let mut selection = String::new();
@@ -57,8 +57,22 @@ fn main() {
             println!("x: deselect habit");
             println!("q: quit");
             io::stdin().read_line(&mut selection).expect("failed to read line");
+            selection = selection.trim().to_string();
+            if selection == "d" {
+                println!("TODO: add a way to deselect");
+            } else if selection == "c" {
+                println!("TODO: add a way to complete selected item");
+            } else if selection == "d" {
+                println!("TODO: add a way to delete");
+            } else if selection == "q" {
+                println!("exiting...");
+                break;
+            } else {
+                println!("INVALID SELECTION: please choose a valid option!");
+            }
         }
-        
+        println!("press enter to continue...");
+        io::stdin().read_line(&mut selection).expect("failed to read line");
     }
 
 }
