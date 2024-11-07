@@ -59,7 +59,8 @@ fn main() {
             } else if selection == "c" {
                 println!("TODO: add a way to complete selected item");
             } else if selection == "d" {
-                println!("TODO: add a way to delete");
+                delete_habit(&conn, habit_selected);
+                habit_selected = -1;
             } else if selection == "e" {
                 println!("TODO: add a way to edit");
             } else if selection == "q" {
@@ -108,17 +109,31 @@ fn add_habit(conn: &database::Connection){
     println!("Habit added!")
 }
 
+fn delete_habit(conn: &database::Connection, habit_id: i32) {
+    // confirm deletion
+    println!("Are you sure you want to delete this habit? (y/n)");
+    let mut confirm = String::new();
+    io::stdin().read_line(&mut confirm).expect("failed to read line");
+    confirm = confirm.trim().to_string();
+    if confirm != "y" {
+        println!("Deletion cancelled");
+        return;
+    }
+    println!("{}", "Deleting habit...".red());
+    let _ = database::delete_habit(&conn, habit_id);
+}
+
 fn select_habit(conn: &database::Connection) -> i32 {
     println!("{}", "---Select a Habit---".bold().yellow().underline());
 
     let habits: Vec<database::Habit> = database::get_habits(&conn).expect("There was a problem getting habits");
-    println!("{:<5}{:<15}{:<15}{:<15}", "Id".blue(),"Name".blue(),"Importance".blue(),"Frequency".blue());
+    println!("{:<5}{:<15}{:<15}{:<15}", "Num".blue(),"Name".blue(),"Importance".blue(),"Frequency".blue());
     // display the habits
     for (i, habit) in habits.iter().enumerate() {
         println!("{:<5}{:<15}{:<15}{:<15}", i, habit.name, habit.importance, habit.frequency);
     }
     // get the user selection
-    println!("Select a habit by id:");
+    println!("Select a habit by number:");
     let mut selection = String::new();
     io::stdin().read_line(&mut selection).expect("failed to read line");
     let selection: usize = selection.trim().parse().expect("Please enter a valid number");

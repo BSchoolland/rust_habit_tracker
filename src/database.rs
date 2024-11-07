@@ -52,6 +52,11 @@ pub fn add_habit(conn: &Connection, name: &str, importance: i32, frequency: &str
     Ok(())
 }
 
+pub fn delete_habit(conn: &Connection, id: i32) -> Result<()> {
+    conn.execute("DELETE FROM habits WHERE id = ?1", params![id])?;
+    Ok(())
+}
+
 pub fn add_habit_entry(conn: &Connection, habit_id: i32, success: bool, date: &str) -> Result<()> {
     conn.execute(
         "INSERT INTO habit_entries (habit_id, success, date) VALUES (?1, ?2, ?3)",
