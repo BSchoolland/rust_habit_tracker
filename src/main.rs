@@ -1,6 +1,7 @@
 use std::io;
 use colored::*;
 use chrono::prelude::*;
+use chrono::Duration;
 
 mod database;
 
@@ -27,6 +28,8 @@ fn main() {
             selection = selection.trim().to_string();
             if selection == "a" {
                 add_habit(&conn);
+                // show the list of habits
+                list_habits(&conn);
             } else if selection == "s" {
                 habit_selected = select_habit(&conn);
                 is_menu_switched = true;
@@ -36,6 +39,8 @@ fn main() {
                 complete_habit(&conn, habit_selected);
                 // deselect the habit
                 habit_selected = -1;
+                // show the list of habits
+                list_habits(&conn);
             } else if selection == "l" {
                 list_habits(&conn);
             } else if selection == "q" {
@@ -57,7 +62,9 @@ fn main() {
                 habit_selected = -1;
                 is_menu_switched = true;
             } else if selection == "c" {
-                println!("TODO: add a way to complete selected item");
+                complete_habit(&conn, habit_selected);
+                // show the list of habits
+                list_habits(&conn);
             } else if selection == "d" {
                 delete_habit(&conn, habit_selected);
                 habit_selected = -1;
@@ -172,13 +179,19 @@ fn list_habits(conn: &database::Connection) {
 }
 
 fn is_habit_complete(conn: &database::Connection, habit_id: i32) -> bool {
+    let habit: database::Habit = database::get_habit(&conn, habit_id).expect("There was a problem getting habit");
+    let frequency: i32 = habit.frequency.parse().unwrap();
     // get today's date
     let local: DateTime<Local> = Local::now();
-    let date = local.format("%Y-%m-%d").to_string();
-    // check if the habit has an entry for today
+    let today = local.format("%Y-%m-%d").to_string();
+
+    // calculate the start date based on the frequency
+    let start_date = (local - Duration::days(frequency as i64)).format("%Y-%m-%d").to_string();
+
+    // check if the habit has an entry within the date range
     let entries: Vec<database::HabitEntry> = database::get_habit_entries(&conn, habit_id).expect("There was a problem getting habit entries");
     for entry in entries {
-        if entry.date == date {
+        if entry.date >= start_date && entry.date <= today {
             return true;
         }
     }

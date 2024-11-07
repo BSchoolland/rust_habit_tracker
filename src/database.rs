@@ -57,6 +57,42 @@ pub fn delete_habit(conn: &Connection, id: i32) -> Result<()> {
     Ok(())
 }
 
+pub fn get_habit(conn: &Connection, id: i32) -> Result<Habit> {
+    let mut stmt = conn.prepare("SELECT id, name, importance, frequency FROM habits WHERE id = ?1")?;
+    let habit = stmt.query_map([id], |row| {
+        Ok(Habit {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            importance: row.get(2)?,
+            frequency: row.get(3)?,
+            habit_entries: vec![]
+        })
+    })?.next().unwrap().unwrap();
+    
+    let mut stmt = conn.prepare("SELECT id, habit_id, success, date FROM habit_entries WHERE habit_id = ?1")?;
+    let habit_entry_iter = stmt.query_map([habit.id], |row| {
+        Ok(HabitEntry {
+            id: row.get(0)?,
+            habit_id: row.get(1)?,
+            success: row.get(2)?,
+            date: row.get(3)?
+        })
+    })?;
+    
+    let mut habit_entries = Vec::new();
+    for habit_entry in habit_entry_iter {
+        habit_entries.push(habit_entry.unwrap());
+    }
+
+    Ok(Habit {
+        id: habit.id,
+        name: habit.name,
+        importance: habit.importance,
+        frequency: habit.frequency,
+        habit_entries: habit_entries
+    })
+}
+
 pub fn add_habit_entry(conn: &Connection, habit_id: i32, success: bool, date: &str) -> Result<()> {
     conn.execute(
         "INSERT INTO habit_entries (habit_id, success, date) VALUES (?1, ?2, ?3)",
