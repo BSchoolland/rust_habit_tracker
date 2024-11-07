@@ -1,5 +1,6 @@
 use std::io;
 use colored::*;
+use chrono::prelude::*;
 
 mod database;
 
@@ -7,28 +8,9 @@ fn main() {
     println!("Hello sqlite!");
     let conn = database::establish_connection().expect("SQLITE had a problem");
     println!("Database started!");
-    // add a habit
-    // let _ = database::add_habit(
-    //     &conn,
-    //     "Exercise",
-    //     10,
-    //     "Daily",
-    // );
-    // get all habits
-    let habits: Result<Vec<database::Habit>, rusqlite::Error> = database::get_habits(&conn);
-    // display the habits
-    for habit in habits.expect("There was a problem getting habits") {
-        println!("Habit: {}", habit.name);
-        println!("Importance: {}", habit.importance);
-        println!("Frequency: {}", habit.frequency);
-        println!("Habit Entries:");
-        for entry in habit.habit_entries {
-            println!("Date: {}", entry.date);
-            println!("Success: {}", entry.success);
-        }
-    }
-    
+
     let mut habit_selected: i32 = -1;
+    let mut is_menu_switched: bool = false;
     // loop for menu
     loop {
         let mut selection = String::new();
@@ -38,6 +20,7 @@ fn main() {
             println!("a: add a new habit");
             println!("s: select an existing habit");
             println!("c: mark a habit as complete for today");
+            println!("l: list habits and their status today");
             println!("q: quit");
             println!("Your choice:");
             io::stdin().read_line(&mut selection).expect("failed to read line");
@@ -46,8 +29,15 @@ fn main() {
                 add_habit(&conn);
             } else if selection == "s" {
                 habit_selected = select_habit(&conn);
+                is_menu_switched = true;
             } else if selection == "c" {
-                println!("TODO:  mark a habit as complete for today")
+                // select a habit and complete it
+                habit_selected = select_habit(&conn);
+                complete_habit(&conn, habit_selected);
+                // deselect the habit
+                habit_selected = -1;
+            } else if selection == "l" {
+                list_habits(&conn);
             } else if selection == "q" {
                 println!("exiting...");
                 break;
@@ -64,8 +54,8 @@ fn main() {
             io::stdin().read_line(&mut selection).expect("failed to read line");
             selection = selection.trim().to_string();
             if selection == "x" {
-                println!("deselecting habit...");
                 habit_selected = -1;
+                is_menu_switched = true;
             } else if selection == "c" {
                 println!("TODO: add a way to complete selected item");
             } else if selection == "d" {
@@ -79,8 +69,12 @@ fn main() {
                 println!("INVALID SELECTION: please choose a valid option!");
             }
         }
-        println!("press enter to continue...");
-        io::stdin().read_line(&mut selection).expect("failed to read line");
+        if !is_menu_switched {
+            println!("press enter to continue...");
+            io::stdin().read_line(&mut selection).expect("failed to read line");
+        } else {
+            is_menu_switched = false;
+        }
     }
 
 }
@@ -95,8 +89,8 @@ fn add_habit(conn: &database::Connection){
 
     println!("Habit frequency:");
     let mut frequency: String = String::new();
-    frequency = frequency.trim().to_string();
     io::stdin().read_line(&mut frequency).expect("failed to read line");
+    frequency = frequency.trim().to_string();
 
     println!("Habit importance:");
     let mut importance: String = String::new();
@@ -130,5 +124,48 @@ fn select_habit(conn: &database::Connection) -> i32 {
     let selection: usize = selection.trim().parse().expect("Please enter a valid number");
     let habit = habits.get(selection).expect("Invalid selection");
     println!("Habit selected: {}", habit.name.green());
-    return selection as i32;
+    return habit.id;
+}
+
+fn complete_habit(conn: &database::Connection, habit_id: i32) {
+    println!("Completing habit...");
+    // get today's date
+    let local: DateTime<Local> = Local::now();
+    let date = local.format("%Y-%m-%d").to_string();
+    // add an entry to the habit for today
+    let _ = database::add_habit_entry(
+        &conn,
+        habit_id,
+        true,
+        &date,
+    );
+}
+
+fn list_habits(conn: &database::Connection) {
+    println!("{}", "---Habit Status---".yellow().bold().underline());
+    let habits: Vec<database::Habit> = database::get_habits(&conn).expect("There was a problem getting habits");
+    println!("{:<5}{:<15}{:<15}{:<15}{:<15}", "Id".blue(),"Name".blue(),"Importance".blue(),"Frequency".blue(),"Status".blue());
+    // display the habits
+    for habit in habits {
+        let status = if is_habit_complete(&conn, habit.id) {
+            "Complete".green()
+        } else {
+            "Incomplete".red()
+        };
+        println!("{:<5}{:<15}{:<15}{:<15}{:<15}{:<15}", habit.id, habit.name, habit.importance, habit.frequency, status, "end");
+    }
+}
+
+fn is_habit_complete(conn: &database::Connection, habit_id: i32) -> bool {
+    // get today's date
+    let local: DateTime<Local> = Local::now();
+    let date = local.format("%Y-%m-%d").to_string();
+    // check if the habit has an entry for today
+    let entries: Vec<database::HabitEntry> = database::get_habit_entries(&conn, habit_id).expect("There was a problem getting habit entries");
+    for entry in entries {
+        if entry.date == date {
+            return true;
+        }
+    }
+    return false;
 }
